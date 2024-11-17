@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balanço Diário</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .negative {
+            color: red;
+        }
+        .positive {
+            color: green;
+        }
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
+        .tabs {
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            margin: 5px;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .tabs.active, .tabs:hover {
+            background-color: #0056b3;
+        }
+        button {
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        let vendas = {
+            gasolinaComum: 0,
+            gasolinaAditivada: 0,
+            etanol: 0,
+            dieselS10: 0
+        };
+
+        let compras = {
+            gasolinaComum: 0,
+            gasolinaAditivada: 0,
+            etanol: 0,
+            dieselS10: 0
+        };
+
+        let veederRoot = {
+            gasolinaComum: 0,
+            gasolinaAditivada: 0,
+            etanol: 0,
+            dieselS10: 0
+        };
+
+        let registros = [];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`#${tabId}`).classList.add('active');
+            
+            document.querySelectorAll('.tabs').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        }
+
+        function adicionarVenda(produto, valor) {
+            vendas[produto] += parseFloat(valor) || 0;
+            document.querySelector(`#venda-${produto}`).value = vendas[produto].toFixed(2);
+            calcular();
+        }
+
+        function adicionarCompra(produto, valor) {
+            compras[produto] += parseFloat(valor) || 0;
+            document.querySelector(`#compra-${produto}`).value = compras[produto].toFixed(2);
+            calcular();
+        }
+
+        function registrarVeederRoot(produto, valor) {
+            veederRoot[produto] = parseFloat(valor) || 0;
+            document.querySelector(`#veeder-${produto}`).value = veederRoot[produto].toFixed(2);
+            calcular();
+        }
+
+        function calcular() {
+            const rows = document.querySelectorAll('#balanco tbody tr');
+            rows.forEach(row => {
+                const inicio = parseFloat(row.cells[1].querySelector('input').value) || 0;
+                const venda = parseFloat(row.cells[2].querySelector('input').value) || 0;
+                const compra = parseFloat(row.cells[3].querySelector('input').value) || 0;
+                const veederRoot = parseFloat(row.cells[5].querySelector('input').value) || 0;
+
+                const valorTotal = inicio + compra - venda;
+                row.cells[4].textContent = valorTotal.toFixed(2);
+
+                const diferenca = valorTotal - veederRoot;
+                row.cells[6].textContent = diferenca.toFixed(2);
+                row.cells[6].className = diferenca < 0 ? 'negative' : 'positive';
+            });
+        }
+
+        function registrarDiario() {
+            const data = {
+                data: new Date().toLocaleDateString(),
+                vendas: { ...vendas },
+                compras: { ...compras },
+                veederRoot: { ...veederRoot }
+            };
+            registros.push(data);
+            atualizarRegistros();
+        }
+
+        function atualizarRegistros() {
+            const tabela = document.querySelector('#registros tbody');
+            tabela.innerHTML = '';
+            registros.forEach(registro => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${registro.data}</td>
+                    <td>${registro.vendas.gasolinaComum.toFixed(2)}</td>
+                    <td>${registro.compras.gasolinaComum.toFixed(2)}</td>
+                    <td>${registro.veederRoot.gasolinaComum.toFixed(2)}</td>
+                    <td>${registro.vendas.gasolinaAditivada.toFixed(2)}</td>
+                    <td>${registro.compras.gasolinaAditivada.toFixed(2)}</td>
+                    <td>${registro.veederRoot.gasolinaAditivada.toFixed(2)}</td>
+                    <td>${registro.vendas.etanol.toFixed(2)}</td>
+                    <td>${registro.compras.etanol.toFixed(2)}</td>
+                    <td>${registro.veederRoot.etanol.toFixed(2)}</td>
+                    <td>${registro.vendas.dieselS10.toFixed(2)}</td>
+                    <td>${registro.compras.dieselS10.toFixed(2)}</td>
+                    <td>${registro.veederRoot.dieselS10.toFixed(2)}</td>
+                `;
+                tabela.appendChild(row);
+            });
+        }
+
+        function salvarComoImagem() {
+            const balancoDiv = document.getElementById('balanco');
+            html2canvas(balancoDiv).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'balanco_diario.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        function limparDados() {
+            vendas = {
+                gasolinaComum: 0,
+                gasolinaAditivada: 0,
+                etanol: 0,
+                dieselS10: 0
+            };
+
+            compras = {
+                gasolinaComum: 0,
+                gasolinaAditivada: 0,
+                etanol: 0,
+                dieselS10: 0
+            };
+
+            veederRoot = {
+                gasolinaComum: 0,
+                gasolinaAditivada: 0,
+                etanol: 0,
+                dieselS10: 0
+            };
+
+            registros = [];
+            document.querySelectorAll('input[type=number]').forEach(input => input.value = '0.00');
+            atualizarRegistros();
+            calcular();
+            alert('Dados limpos com sucesso!');
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <div class="tabs active" data-tab="balanco" onclick="switchTab('balanco')">Balanço Diário</div>
+            <div class="tabs" data-tab="vendas" onclick="switchTab('vendas')">Vendas Diárias</div>
+            <div class="tabs" data-tab="compras" onclick="switchTab('compras')">Compras Diárias</div>
+            <div class="tabs" data-tab="veeder" onclick="switchTab('veeder')">Veeder Root</div>
+            <div class="tabs" data-tab="registros" onclick="switchTab('registros')">Registros Diários</div>
+        </div>
+
+        <div id="balanco" class="tab active">
+            <h2>Balanço Diário</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Início Balanço</th>
+                        <th>Venda</th>
+                        <th>Compra</th>
+                        <th>Valor Total</th>
+                        <th>Veeder Root do Dia</th>
+                        <th>Diferença</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gasolina Comum</td>
+                        <td><input type="number" step="0.01" oninput="calcular()"></td>
+                        <td><input id="venda-gasolinaComum" type="number" step="0.01" value="0.00" readonly></td>
+                        <td><input id="compra-gasolinaComum" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                        <td><input id="veeder-gasolinaComum" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Gasolina Aditivada</td>
+                        <td><input type="number" step="0.01" oninput="calcular()"></td>
+                        <td><input id="venda-gasolinaAditivada" type="number" step="0.01" value="0.00" readonly></td>
+                        <td><input id="compra-gasolinaAditivada" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                        <td><input id="veeder-gasolinaAditivada" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Etanol</td>
+                        <td><input type="number" step="0.01" oninput="calcular()"></td>
+                        <td><input id="venda-etanol" type="number" step="0.01" value="0.00" readonly></td>
+                        <td><input id="compra-etanol" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                        <td><input id="veeder-etanol" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Diesel S10</td>
+                        <td><input type="number" step="0.01" oninput="calcular()"></td>
+                        <td><input id="venda-dieselS10" type="number" step="0.01" value="0.00" readonly></td>
+                        <td><input id="compra-dieselS10" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                        <td><input id="veeder-dieselS10" type="number" step="0.01" value="0.00" readonly></td>
+                        <td>0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button onclick="registrarDiario()">Registrar Valores do Dia</button>
+            <button onclick="salvarComoImagem()">Salvar como Imagem</button>
+            <button onclick="limparDados()">Limpar Dados</button>
+        </div>
+
+        <div id="vendas" class="tab">
+            <h2>Vendas Diárias</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Adicionar Venda</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gasolina Comum</td>
+                        <td><input type="number" step="0.01" id="add-venda-gasolinaComum"><button onclick="adicionarVenda('gasolinaComum', document.getElementById('add-venda-gasolinaComum').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Gasolina Aditivada</td>
+                        <td><input type="number" step="0.01" id="add-venda-gasolinaAditivada"><button onclick="adicionarVenda('gasolinaAditivada', document.getElementById('add-venda-gasolinaAditivada').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Etanol</td>
+                        <td><input type="number" step="0.01" id="add-venda-etanol"><button onclick="adicionarVenda('etanol', document.getElementById('add-venda-etanol').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Diesel S10</td>
+                        <td><input type="number" step="0.01" id="add-venda-dieselS10"><button onclick="adicionarVenda('dieselS10', document.getElementById('add-venda-dieselS10').value)">Adicionar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="compras" class="tab">
+            <h2>Compras Diárias</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Adicionar Compra</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gasolina Comum</td>
+                        <td><input type="number" step="0.01" id="add-compra-gasolinaComum"><button onclick="adicionarCompra('gasolinaComum', document.getElementById('add-compra-gasolinaComum').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Gasolina Aditivada</td>
+                        <td><input type="number" step="0.01" id="add-compra-gasolinaAditivada"><button onclick="adicionarCompra('gasolinaAditivada', document.getElementById('add-compra-gasolinaAditivada').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Etanol</td>
+                        <td><input type="number" step="0.01" id="add-compra-etanol"><button onclick="adicionarCompra('etanol', document.getElementById('add-compra-etanol').value)">Adicionar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Diesel S10</td>
+                        <td><input type="number" step="0.01" id="add-compra-dieselS10"><button onclick="adicionarCompra('dieselS10', document.getElementById('add-compra-dieselS10').value)">Adicionar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="veeder" class="tab">
+            <h2>Veeder Root Diário</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Registrar Veeder Root</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gasolina Comum</td>
+                        <td><input type="number" step="0.01" id="add-veeder-gasolinaComum"><button onclick="registrarVeederRoot('gasolinaComum', document.getElementById('add-veeder-gasolinaComum').value)">Registrar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Gasolina Aditivada</td>
+                        <td><input type="number" step="0.01" id="add-veeder-gasolinaAditivada"><button onclick="registrarVeederRoot('gasolinaAditivada', document.getElementById('add-veeder-gasolinaAditivada').value)">Registrar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Etanol</td>
+                        <td><input type="number" step="0.01" id="add-veeder-etanol"><button onclick="registrarVeederRoot('etanol', document.getElementById('add-veeder-etanol').value)">Registrar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Diesel S10</td>
+                        <td><input type="number" step="0.01" id="add-veeder-dieselS10"><button onclick="registrarVeederRoot('dieselS10', document.getElementById('add-veeder-dieselS10').value)">Registrar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="registros" class="tab">
+            <h2>Registros Diários</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Gasolina Comum Venda</th>
+                        <th>Gasolina Comum Compra</th>
+                        <th>Gasolina Comum Veeder</th>
+                        <th>Gasolina Aditivada Venda</th>
+                        <th>Gasolina Aditivada Compra</th>
+                        <th>Gasolina Aditivada Veeder</th>
+                        <th>Etanol Venda</th>
+                        <th>Etanol Compra</th>
+                        <th>Etanol Veeder</th>
+                        <th>Diesel S10 Venda</th>
+                        <th>Diesel S10 Compra</th>
+                        <th>Diesel S10 Veeder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Registros serão adicionados
